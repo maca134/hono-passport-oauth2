@@ -1,8 +1,7 @@
-import { randomBytes } from "crypto";
-import type { Context } from "hono";
-import { type HonoPassportStrategy, PassportError } from "@maca134/hono-passport";
-import type { HonoSessionEnv } from "@maca134/hono-session";
-
+import { randomBytes } from 'crypto';
+import { type HonoPassportStrategy, PassportError } from '@maca134/hono-passport';
+import type { HonoSessionEnv } from '@maca134/hono-session';
+import type { Context } from 'hono';
 
 type OAuth2SessionData = {
 	__oauth2state__?: string;
@@ -33,7 +32,7 @@ export type OAuth2Token = {
 };
 
 const store: OAuth2StrategyStateStore = {
-	generate: ctx => {
+	generate: (ctx) => {
 		const state = randomBytes(8).toString('hex');
 		ctx.var.session.data.__oauth2state__ = state;
 		return state;
@@ -47,10 +46,7 @@ const store: OAuth2StrategyStateStore = {
 
 export function oauth2Strategy<TUser>(
 	options: OAuth2StrategyOptions,
-	validate: (
-		ctx: Context,
-		token: OAuth2Token,
-	) => Promise<TUser | undefined>,
+	validate: (ctx: Context, token: OAuth2Token) => Promise<TUser | undefined>
 ): HonoPassportStrategy<TUser> {
 	if (options.state && !options.store) {
 		options.store = store;
@@ -64,7 +60,10 @@ export function oauth2Strategy<TUser>(
 				params.set('redirect_uri', options.returnURL);
 				params.set('response_type', 'code');
 				if (options.state) {
-					params.set('state', options.store!.generate(ctx as Context<HonoSessionEnv<OAuth2SessionData>>));
+					params.set(
+						'state',
+						options.store!.generate(ctx as Context<HonoSessionEnv<OAuth2SessionData>>)
+					);
 				}
 				if (options.scope) {
 					params.set('scope', options.scope);
@@ -72,8 +71,15 @@ export function oauth2Strategy<TUser>(
 				return ctx.redirect(`${options.authorizeURL}?${params.toString()}`);
 			}
 
-			if (options.state && (!ctx.req.query('state') || !options.store!.verify(ctx as Context<HonoSessionEnv<OAuth2SessionData>>, ctx.req.query('state')!))) {
-				throw new PassportError(`Invalid state parameter.`);
+			if (
+				options.state &&
+				(!ctx.req.query('state') ||
+					!options.store!.verify(
+						ctx as Context<HonoSessionEnv<OAuth2SessionData>>,
+						ctx.req.query('state')!
+					))
+			) {
+				throw new PassportError('Invalid state parameter.');
 			}
 
 			const code = ctx.req.query('code')!;
@@ -99,7 +105,7 @@ export function oauth2Strategy<TUser>(
 				throw new PassportError(`Failed to get token: ${response.statusText}`);
 			}
 
-			const token = await response.json() as OAuth2Token;
+			const token = (await response.json()) as OAuth2Token;
 
 			const user = await validate(ctx, token);
 			if (user) {
@@ -108,4 +114,3 @@ export function oauth2Strategy<TUser>(
 		},
 	};
 }
-
